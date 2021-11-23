@@ -1,3 +1,5 @@
+//parts of the code are orginal or modified from Hypfer Sören Beye  https://github.com/Hypfer/esp8266-vindriktning-particle-sensor 
+
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <secret.h>
@@ -112,8 +114,8 @@ void autoConfPayLoadfnc(String name, String unit, String value_template, String 
     identifiers.add(identifier);
 
     device["identifiers"] = identifiers;
-    device["manufacturer"] = "Erik";
-    device["model"] = "LivingRoom";
+    device["manufacturer"] = "quattroerik";
+    device["model"] = "Vindriktning-plus";
     device["name"] = identifier;
     device["sw_version"] = swVersion;
 
@@ -129,8 +131,6 @@ void autoConfPayLoadfnc(String name, String unit, String value_template, String 
     autoconfPayload["icon"] = icon;
 
     serializeJson(autoconfPayload, mqttPayload);
-    //return mqttPayload;
-    //client.publish(&MQTT_TOPIC_AUTOCONF_WIFI_SENSOR[0], &mqttPayload[0], true);
 }
 
 void publishAutoConfig() {
@@ -164,14 +164,9 @@ void publishState() {
     stateJson["pm25"] = statePM25.avgPM25;
     stateJson["motion"] = stateIR.enabled;
     stateJson["sw_version"] = swVersion;
-    
-    //stateJson["readTime"] = dataSet.time;
-    //stateJson["readAirfilter"] = dataSet.airFilter;
 
     stateJson["wifi"] = wifiJson.as<JsonObject>();
-
     serializeJson(stateJson, payload);
-    //Serial.print(payload);
     client.publish(&MQTT_TOPIC_STATE[0], &payload[0], true);
 }
 
@@ -179,6 +174,7 @@ void setup() {
   //pinMode(LED_BUILTIN, OUTPUT); // The built-in LED is initialized as an output
 
   Serial.begin(115200);
+  //initialize the serial port for reading the vindriktning pm25 sensor values
   SerialCom::setup();
 
   setupAutoConfig();
