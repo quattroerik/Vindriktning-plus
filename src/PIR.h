@@ -1,4 +1,3 @@
-
 #define PIRPIN 14  //D5
 
 namespace PIRread {

@@ -4,6 +4,11 @@ Updated Vindriktning with Wifi Connectivity, Motion sensor, Temperature and Humi
 Inspired & parts of the code are used from: https://github.com/Hypfer/esp8266-vindriktning-particle-sensor
 
 This is my "Backpack" for the Vindriktning PM25 sensor. Housing is adjusted to the IKEA housing.
+A standalone version for nodeMcu boards is available with addtional LUX sensor. (V1: analog sensor)
+
+Current setup sends temperature, humidity and pm25 values every 30 seconds to HomeAssistant MQTT server.
+Every 1 second PIR motion sensor is checked, in case motion is detected an mqtt message is send.
+
 Work is still in progress.
 
 Addtional to the print you need:
