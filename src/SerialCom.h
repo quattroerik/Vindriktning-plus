@@ -1,4 +1,5 @@
 #pragma once
+//source:  Hypfer Sören Beye  https://github.com/Hypfer/esp8266-vindriktning-particle-sensor
 
 #include <SoftwareSerial.h>
 

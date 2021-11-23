@@ -4,7 +4,6 @@ struct particleSensorState_t {
     uint8_t measurementIdx = 0;
 };
 
-
 struct bh1750SensorState {
     float lux;
     float lastState;
