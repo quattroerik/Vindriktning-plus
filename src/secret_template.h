@@ -1,3 +1,6 @@
+//rename this file to secret.h
+//update with your information
+
 #define SECRET_SSID "your wifi SID"
 #define SECRET_WIFI_PASSWORD "your wifi password"
 #define SECRET_MQTT_SERVER "192.168.0.5"

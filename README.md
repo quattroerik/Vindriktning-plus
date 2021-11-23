@@ -12,6 +12,9 @@ Addtional to the print you need:
 - Mini PIR sensor
 - 4 x M2x10 self tapping
 
+Check, update and rename secret_template.h to secret.h!
+
+
 ![View_Front](./img/View_Front.jpg)
 
 ![View_Back](./img/View_Back.jpg)
