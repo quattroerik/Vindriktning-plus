@@ -6,7 +6,7 @@
 #include <types.h>
 #include <PubSubClient.h>
 #include "aht21Sensor.h"
-#include "ir_com.h"
+#include "PIR.h"
 #include <ArduinoJson.h>
 #include <ArduinoOTA.h>
 #include <SerialCom.h>
@@ -27,7 +27,7 @@ char MQTT_TOPIC_AUTOCONF_TEMPERATURE_SENSOR[128];
 char MQTT_TOPIC_AUTOCONF_HUMIDITY_SENSOR[128];
 char MQTT_TOPIC_AUTOCONF_MOTION_SENSOR[128];
 
-const char* swVersion = "beta.1";
+const char* swVersion = "2021.11.23_01";
 const char* ssid = SECRET_SSID;
 const char* wifi_password = SECRET_WIFI_PASSWORD;
 const char* mqtt_server = SECRET_MQTT_SERVER;
@@ -36,6 +36,7 @@ const char* mqtt_user = SECRET_MQTT_USER;
 const char* mqtt_password = SECRET_MQTT_PASSWORD;
 const char* mqtt_client_id = SECRET_MQTT_CLIENT_ID;
 
+//Timers (30 seconds for Temp, Humidity, 10 seconds for PM25 data aquisition, 1 second for PIR motion sensor)
 uint32_t lastSensorCheckInterval = 0;
 const uint16_t SensorCheckInterval = 10000; //30000 = 30 second
 
@@ -45,9 +46,9 @@ const uint16_t SensorCheckInterval_small = 1000; //1000 = 1 second
 uint32_t lastSensorCheckInterval_mid = 0;
 const uint16_t SensorCheckInterval_mid = 10000; //10000 = 10 second
 
+//Var for sensors
 ahtSensorState stateAHT;
-irSensorState stateIR;
-mqttDataSet dataSet;
+pirSensorState statePIR;
 particleSensorState_t statePM25;
 
 //Var for Wifi client
@@ -170,7 +171,6 @@ void autoConfigMqtt() {
     client.publish(&MQTT_TOPIC_AUTOCONF_MOTION_SENSOR[0], &mqttPayload[0], true);
     autoconfPayload.clear();
 
-
 }
 
 void publishState() {
@@ -184,7 +184,7 @@ void publishState() {
     stateJson["temperature"] = stateAHT.temperature;
     stateJson["humidity"] = stateAHT.humidity;
     stateJson["pm25"] = statePM25.avgPM25;
-    stateJson["motion"] = stateIR.enabled;
+    stateJson["motion"] = statePIR.enabled;
     stateJson["sw_version"] = swVersion;
 
     stateJson["wifi"] = wifiJson.as<JsonObject>();
@@ -257,12 +257,12 @@ void setup() {
   ArduinoOTA.begin();
 
   ahtRead::setup();
-  IRread::setup();
+  PIRread::setup();
   
   //initalize timestamp for movement
-  stateIR.timestamp = millis();
+  statePIR.timestamp = millis();
 
-  IRread::parseIR(stateIR);
+  PIRread::parsePIR(statePIR);
   ahtRead::parseAHT(stateAHT);
   
   //mqtt client
@@ -305,10 +305,10 @@ void loop() {
   //every 1 seconds check IR
   if (currentMillis - lastSensorCheckInterval_small >= SensorCheckInterval_small) {
     lastSensorCheckInterval_small = currentMillis;
-    IRread::parseIR(stateIR);
+    PIRread::parsePIR(statePIR);
     
     //only publish here in case motion is detected
-    if(stateIR.lastState != stateIR.enabled) {
+    if(statePIR.lastState != statePIR.enabled) {
       publishState();
     }
   }

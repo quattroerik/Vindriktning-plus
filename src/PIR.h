@@ -1,13 +1,13 @@
 
-#define IRPIN 14  //D5
+#define PIRPIN 14  //D5
 
-namespace IRread {
+namespace PIRread {
     void setup() {
-        pinMode(IRPIN,INPUT);
+        pinMode(PIRPIN,INPUT);
     }
 
-    void parseIR(irSensorState& state) {
-        u_int8_t tmp = digitalRead(IRPIN);
+    void parsePIR(pirSensorState& state) {
+        u_int8_t tmp = digitalRead(PIRPIN);
         if(tmp == 1) {
             state.timestamp = millis();
         }

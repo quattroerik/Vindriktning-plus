@@ -4,7 +4,7 @@
 #include <SoftwareSerial.h>
 
 namespace SerialCom {
-    constexpr static const uint8_t PIN_UART_RX = 12; // D2 on Wemos D1 Mini
+    constexpr static const uint8_t PIN_UART_RX = 4; // D2 on Wemos D1 Mini
     constexpr static const uint8_t PIN_UART_TX = 13; // UNUSED
 
     SoftwareSerial sensorSerial(PIN_UART_RX, PIN_UART_TX);
@@ -37,24 +37,16 @@ namespace SerialCom {
 
         if (state.measurementIdx == 0) {
             float avgPM25 = 0.0f;
-            bool valid = true;
 
             for (uint8_t i = 0; i < 5; ++i) {
-                if (state.measurements[i] == 0) {
-                    valid = false;
-                    break;
-                } else {
-                    avgPM25 += state.measurements[i] / 5.0f;
-                }
+                avgPM25 += state.measurements[i] / 5.0f;
             }
 
-            if (valid) {
-                state.avgPM25 = avgPM25;
+            state.avgPM25 = avgPM25;
+            state.valid = true;
 
-                Serial.printf("New Avg PM25: %d\n", state.avgPM25);
-            }
+            Serial.printf("New Avg PM25: %d\n", state.avgPM25);
         }
-
 
         clearRxBuf();
     }
