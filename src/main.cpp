@@ -19,7 +19,7 @@ const char* Name = SECRET_Name;
 char MQTT_TOPIC_AVAILABILITY[128];
 char MQTT_TOPIC_STATE[128];
 char MQTT_TOPIC_COMMAND[128];
-char mqttPayload[2048];
+
 
 char MQTT_TOPIC_AUTOCONF_WIFI_SENSOR[128];
 char MQTT_TOPIC_AUTOCONF_PM25_SENSOR[128];
@@ -42,6 +42,9 @@ const uint16_t SensorCheckInterval = 10000; //30000 = 30 second
 uint32_t lastSensorCheckInterval_small = 0;
 const uint16_t SensorCheckInterval_small = 1000; //1000 = 1 second
 
+uint32_t lastSensorCheckInterval_mid = 0;
+const uint16_t SensorCheckInterval_mid = 10000; //10000 = 10 second
+
 ahtSensorState stateAHT;
 irSensorState stateIR;
 mqttDataSet dataSet;
@@ -63,33 +66,6 @@ void connect_wifi() {
   }
 }
 
-void publishAutoConfig();
-
-//Connect to MQTT broker and subscribe topics
-void connect_MQTT() {
-  // Ensure connection to MQTT broker
-  while (!client.connected()) {
-    //Connect to MQTT broker with credientials specified in SECRET
-    if(client.connect(mqtt_client_id, mqtt_user, mqtt_password)) {
-
-      //Subscribe to the topics currently implemented
-      //client.subscribe("Living_Room/Time");
-
-      publishAutoConfig();
-    } 
-    else {
-      delay(5000);
-    }
-  }
-}
-
-// This function is executed when some device publishes a message to a topic that your ESP8266 is subscribed to
-// Change the function below to add logic to your program, so when a device publishes a message to a topic that 
-// your ESP8266 is subscribed you can actually do something
-void callback(String topic, byte* payload, unsigned int length) {
-
-}
-
 void setupAutoConfig() {
     snprintf(identifier, sizeof(identifier), "ESP-%X", ESP.getChipId());
     snprintf(MQTT_TOPIC_AVAILABILITY, 127, "%s/%s/LWT", mqtt_PREFIX, identifier);
@@ -103,9 +79,9 @@ void setupAutoConfig() {
     snprintf(MQTT_TOPIC_AUTOCONF_MOTION_SENSOR, 127, "homeassistant/sensor/%s_motion/config", identifier);
 }
 
-void autoConfPayLoadfnc(String name, String unit, String value_template, String unique_id, String json_attributes_topic, String json_attributes_template, String icon) {
-    
-    //char mqttPayload[2048];
+void autoConfigMqtt() {
+
+    char mqttPayload[2048];
     DynamicJsonDocument device(256);
     DynamicJsonDocument autoconfPayload(1024);
     StaticJsonDocument<64> identifiersDoc;
@@ -122,33 +98,79 @@ void autoConfPayLoadfnc(String name, String unit, String value_template, String 
     autoconfPayload["device"] = device.as<JsonObject>();
     autoconfPayload["availability_topic"] = MQTT_TOPIC_AVAILABILITY;
     autoconfPayload["state_topic"] = MQTT_TOPIC_STATE;
-    autoconfPayload["name"] = identifier + name;
-    autoconfPayload["value_template"] = value_template;
-    autoconfPayload["unique_id"] = identifier + unique_id;
+    autoconfPayload["name"] = "WiFi";
+    autoconfPayload["value_template"] = "{{value_json.wifi.rssi}}";
+    autoconfPayload["unique_id"] = identifier + String("_wifi");
     autoconfPayload["unit_of_measurement"] = "dBm";
     autoconfPayload["json_attributes_topic"] = MQTT_TOPIC_STATE;
-    autoconfPayload["json_attributes_template"] = json_attributes_template;
-    autoconfPayload["icon"] = icon;
+    autoconfPayload["json_attributes_template"] = "{\"ssid\": \"{{value_json.wifi.ssid}}\", \"ip\": \"{{value_json.wifi.ip}}\"}";
+    autoconfPayload["icon"] = "mdi:wifi";
 
     serializeJson(autoconfPayload, mqttPayload);
-}
-
-void publishAutoConfig() {
-
-    autoConfPayLoadfnc(" WiFi","{{value_json.wifi.rssi}}","_wifi","dBm",MQTT_TOPIC_STATE,"{\"ssid\": \"{{value_json.wifi.ssid}}\", \"ip\": \"{{value_json.wifi.ip}}\"}","mdi:wifi");
     client.publish(&MQTT_TOPIC_AUTOCONF_WIFI_SENSOR[0], &mqttPayload[0], true);
+    autoconfPayload.clear();
 
-    autoConfPayLoadfnc(" PM25","lx","{{{value_json.pm25}}","_pm25","μg/m³","","mdi:air-filter");
+
+    autoconfPayload["device"] = device.as<JsonObject>();
+    autoconfPayload["availability_topic"] = MQTT_TOPIC_AVAILABILITY;
+    autoconfPayload["state_topic"] = MQTT_TOPIC_STATE;
+    autoconfPayload["name"] = "PM25";
+    autoconfPayload["value_template"] = "{{value_json.pm25}}";
+    autoconfPayload["unique_id"] = identifier + String("_pm25");
+    autoconfPayload["unit_of_measurement"] = "μg/m³";
+    autoconfPayload["json_attributes_topic"] = MQTT_TOPIC_STATE;
+    autoconfPayload["icon"] = "mdi:air-filter";
+
+    serializeJson(autoconfPayload, mqttPayload);
     client.publish(&MQTT_TOPIC_AUTOCONF_PM25_SENSOR[0], &mqttPayload[0], true);
+    autoconfPayload.clear();
 
-    autoConfPayLoadfnc(" Temperature","°C", "{{value_json.temperature}}","_temperature","","", "mdi:air-filter");
+
+    autoconfPayload["device"] = device.as<JsonObject>();
+    autoconfPayload["availability_topic"] = MQTT_TOPIC_AVAILABILITY;
+    autoconfPayload["state_topic"] = MQTT_TOPIC_STATE;
+    autoconfPayload["name"] = "Temperature";
+    autoconfPayload["value_template"] = "{{value_json.temperature}}";
+    autoconfPayload["unique_id"] = identifier + String("_temperature");
+    autoconfPayload["unit_of_measurement"] = "°C";
+    autoconfPayload["json_attributes_topic"] = MQTT_TOPIC_STATE;
+    autoconfPayload["icon"] = "mdi:thermometer";
+
+    serializeJson(autoconfPayload, mqttPayload);
     client.publish(&MQTT_TOPIC_AUTOCONF_TEMPERATURE_SENSOR[0], &mqttPayload[0], true);
+    autoconfPayload.clear();
 
-    autoConfPayLoadfnc(" Humidity", "rH%", "{{value_json.humidity}}", "_humidity", "", "", "mdi:air-filter");
+
+    autoconfPayload["device"] = device.as<JsonObject>();
+    autoconfPayload["availability_topic"] = MQTT_TOPIC_AVAILABILITY;
+    autoconfPayload["state_topic"] = MQTT_TOPIC_STATE;
+    autoconfPayload["name"] = "Humidity";
+    autoconfPayload["value_template"] = "{{value_json.humidity}}";
+    autoconfPayload["unique_id"] = identifier + String("_humidity");
+    autoconfPayload["unit_of_measurement"] = "rH%";
+    autoconfPayload["json_attributes_topic"] = MQTT_TOPIC_STATE;
+    autoconfPayload["icon"] = "mdi:water-percent";
+    
+    serializeJson(autoconfPayload, mqttPayload);
     client.publish(&MQTT_TOPIC_AUTOCONF_HUMIDITY_SENSOR[0], &mqttPayload[0], true);
+    autoconfPayload.clear();
 
-    autoConfPayLoadfnc(" Motion", "ON/OFF", "{{value_json.motion}}", "_motion", "","", "mdi:motion-sensor");
+
+    autoconfPayload["device"] = device.as<JsonObject>();
+    autoconfPayload["availability_topic"] = MQTT_TOPIC_AVAILABILITY;
+    autoconfPayload["state_topic"] = MQTT_TOPIC_STATE;
+    autoconfPayload["name"] = "Motion";
+    autoconfPayload["value_template"] = "{{value_json.motion}}";
+    autoconfPayload["unique_id"] = identifier + String("_motion");
+    autoconfPayload["unit_of_measurement"] = "ON/OFF";
+    autoconfPayload["json_attributes_topic"] = MQTT_TOPIC_STATE;
+    autoconfPayload["icon"] = "mdi:motion-sensor";
+    
+    serializeJson(autoconfPayload, mqttPayload);
     client.publish(&MQTT_TOPIC_AUTOCONF_MOTION_SENSOR[0], &mqttPayload[0], true);
+    autoconfPayload.clear();
+
+
 }
 
 void publishState() {
@@ -170,6 +192,28 @@ void publishState() {
     client.publish(&MQTT_TOPIC_STATE[0], &payload[0], true);
 }
 
+// This function is executed when some device publishes a message to a topic that your ESP8266 is subscribed to
+// Change the function below to add logic to your program, so when a device publishes a message to a topic that 
+// your ESP8266 is subscribed you can actually do something
+void callback(String topic, byte* payload, unsigned int length) {}
+
+//Connect to MQTT broker and subscribe topics
+void connect_MQTT() {
+  // Ensure connection to MQTT broker
+  while (!client.connected()) {
+    //Connect to MQTT broker with credientials specified in SECRET
+    if(client.connect(mqtt_client_id, mqtt_user, mqtt_password)) {
+      
+      autoConfigMqtt();
+      // Make sure to subscribe after polling the status so that we never execute commands with the default data
+      client.subscribe(MQTT_TOPIC_COMMAND);
+      break;
+    } 
+    else {
+      delay(5000);
+    }
+  }
+}
 void setup() {
   //pinMode(LED_BUILTIN, OUTPUT); // The built-in LED is initialized as an output
 
@@ -177,11 +221,7 @@ void setup() {
   //initialize the serial port for reading the vindriktning pm25 sensor values
   SerialCom::setup();
 
-  setupAutoConfig();
-  publishAutoConfig();
   connect_wifi();
-  client.setServer(mqtt_server, mqtt_port); //set mqtt server
-  client.setCallback(callback); //set callback method for incoming mqtt topics
   
   //setup OTA
 
@@ -225,6 +265,16 @@ void setup() {
   IRread::parseIR(stateIR);
   ahtRead::parseAHT(stateAHT);
   
+  //mqtt client
+  setupAutoConfig();
+
+  client.setServer(mqtt_server, mqtt_port); //set mqtt server
+  client.setKeepAlive(10);
+  client.setBufferSize(2048);
+  client.setCallback(callback); //set callback method for incoming mqtt topics
+  client.connect(mqtt_client_id, mqtt_user, mqtt_password);
+  client.publish(MQTT_TOPIC_AVAILABILITY, AVAILABILITY_ONLINE, true);
+  autoConfigMqtt();
   //Serial.begin(9600);
   //Serial.print("start publish");
 }
@@ -242,12 +292,6 @@ void loop() {
   //check mqtt connection, if connection lost -> reconnect
   //toDo: looping in case MQTT broker is not available (on other hand, display will not do anything...)
   connect_MQTT();
-
-  //check MQTT broker for topics
-  client.loop();
-
-  SerialCom::handleUart(statePM25);
-
 
   //every 30 seconds publish data
   const uint32_t currentMillis = millis();
@@ -267,6 +311,11 @@ void loop() {
     if(stateIR.lastState != stateIR.enabled) {
       publishState();
     }
-    
+  }
+
+  //every 10 seconds check IR
+  if (currentMillis - lastSensorCheckInterval_mid >= SensorCheckInterval_mid) {
+    lastSensorCheckInterval_mid = currentMillis;
+    SerialCom::handleUart(statePM25);
   }
 }
