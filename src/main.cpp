@@ -20,7 +20,6 @@ char MQTT_TOPIC_AVAILABILITY[128];
 char MQTT_TOPIC_STATE[128];
 char MQTT_TOPIC_COMMAND[128];
 
-
 char MQTT_TOPIC_AUTOCONF_WIFI_SENSOR[128];
 char MQTT_TOPIC_AUTOCONF_PM25_SENSOR[128];
 char MQTT_TOPIC_AUTOCONF_TEMPERATURE_SENSOR[128];
@@ -80,8 +79,8 @@ void setupAutoConfig() {
     snprintf(MQTT_TOPIC_AUTOCONF_MOTION_SENSOR, 127, "homeassistant/sensor/%s_motion/config", identifier);
 }
 
+//configure autodiscovery for homeassistant
 void autoConfigMqtt() {
-
     char mqttPayload[2048];
     DynamicJsonDocument device(256);
     DynamicJsonDocument autoconfPayload(1024);
@@ -196,6 +195,7 @@ void publishState() {
 // Change the function below to add logic to your program, so when a device publishes a message to a topic that 
 // your ESP8266 is subscribed you can actually do something
 void callback(String topic, byte* payload, unsigned int length) {}
+//no work here
 
 //Connect to MQTT broker and subscribe topics
 void connect_MQTT() {
@@ -215,12 +215,10 @@ void connect_MQTT() {
   }
 }
 void setup() {
-  //pinMode(LED_BUILTIN, OUTPUT); // The built-in LED is initialized as an output
-
-  Serial.begin(115200);
   //initialize the serial port for reading the vindriktning pm25 sensor values
   SerialCom::setup();
 
+  //connect to wifi
   connect_wifi();
   
   //setup OTA
@@ -265,7 +263,7 @@ void setup() {
   PIRread::parsePIR(statePIR);
   ahtRead::parseAHT(stateAHT);
   
-  //mqtt client
+  //mqtt client setup and init
   setupAutoConfig();
 
   client.setServer(mqtt_server, mqtt_port); //set mqtt server
@@ -275,8 +273,6 @@ void setup() {
   client.connect(mqtt_client_id, mqtt_user, mqtt_password);
   client.publish(MQTT_TOPIC_AVAILABILITY, AVAILABILITY_ONLINE, true);
   autoConfigMqtt();
-  //Serial.begin(9600);
-  //Serial.print("start publish");
 }
 
 void loop() {
